@@ -1,0 +1,7 @@
+flask
+gunicorn
+anthropic
+requests
+beautifulsoup4
+cloudscraper
+python-dotenv

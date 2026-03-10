@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Etsy AI Shop Analyzer</title>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --orange: #F56400;
+      --orange-hover: #d95500;
+      --orange-light: #fff3eb;
+      --dark: #111827;
+      --gray: #6b7280;
+      --light: #f3f4f6;
+      --white: #ffffff;
+      --border: #e5e7eb;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--light);
+      color: var(--dark);
+      min-height: 100vh;
+    }
+
+    header {
+      background: var(--white);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      height: 58px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .logo { font-size: 20px; font-weight: 800; color: var(--orange); }
+    .logo span { color: var(--dark); }
+    .badge {
+      background: var(--orange-light);
+      color: var(--orange);
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 99px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .page { max-width: 760px; margin: 0 auto; padding: 0 20px 80px; }
+
+    .hero { text-align: center; padding: 52px 0 36px; }
+    .hero h1 { font-size: clamp(24px, 5vw, 38px); font-weight: 800; line-height: 1.2; margin-bottom: 12px; }
+    .hero h1 em { color: var(--orange); font-style: normal; }
+    .hero p { font-size: 16px; color: var(--gray); max-width: 460px; margin: 0 auto; line-height: 1.6; }
+
+    .card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.05);
+      margin-bottom: 16px;
+    }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      background: var(--light);
+      border-radius: 10px;
+      padding: 4px;
+      margin-bottom: 18px;
+    }
+    .tab-btn {
+      flex: 1; height: 36px; border: none; border-radius: 8px;
+      font-size: 13px; font-weight: 600; cursor: pointer;
+      background: transparent; color: var(--gray); transition: all .15s;
+    }
+    .tab-btn.active { background: var(--white); color: var(--dark); box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+
+    /* Inputs */
+    .input-group { display: flex; flex-direction: column; gap: 10px; }
+    .input-row { display: flex; gap: 8px; }
+
+    input[type="url"], input[type="text"] {
+      flex: 1;
+      height: 46px;
+      padding: 0 14px;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      font-size: 14px;
+      outline: none;
+      color: var(--dark);
+      background: var(--white);
+      transition: border-color .18s;
+      width: 100%;
+    }
+    input:focus { border-color: var(--orange); }
+    input::placeholder { color: #b0b8c1; }
+
+    textarea {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      font-size: 13px;
+      font-family: inherit;
+      color: var(--dark);
+      line-height: 1.5;
+      resize: vertical;
+      outline: none;
+    }
+    textarea:focus { border-color: var(--orange); }
+
+    .btn {
+      height: 46px;
+      padding: 0 22px;
+      background: var(--orange);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background .15s, transform .1s;
+      white-space: nowrap;
+    }
+    .btn:hover { background: var(--orange-hover); }
+    .btn:active { transform: scale(.97); }
+    .btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+    .btn-full { width: 100%; }
+    .btn-sm { height: 34px; padding: 0 14px; font-size: 13px; }
+    .btn-ghost { background: var(--light); color: var(--dark); border: 1px solid var(--border); }
+    .btn-ghost:hover { background: var(--border); }
+
+    /* API key callout */
+    .callout {
+      background: var(--orange-light);
+      border: 1px solid #fcd9b6;
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 13px;
+    }
+    .callout ol { margin: 6px 0 8px 18px; line-height: 1.9; }
+
+    /* Divider */
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--gray);
+      font-size: 13px;
+      margin: 6px 0;
+    }
+    .divider::before, .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* Demo buttons */
+    .demo-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .demo-btn {
+      flex: 1;
+      min-width: 0;
+      height: 38px;
+      padding: 0 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      border: 1.5px dashed var(--border);
+      background: var(--light);
+      color: var(--gray);
+      cursor: pointer;
+      transition: all .15s;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .demo-btn:hover { border-color: var(--orange); color: var(--orange); background: var(--orange-light); }
+
+    /* Features */
+    .features {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-top: 14px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+    }
+    .feature { font-size: 13px; color: var(--gray); }
+
+    /* Status */
+    #status-bar {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 13px 16px;
+      font-size: 13px;
+      color: var(--gray);
+      display: none;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .spinner {
+      width: 15px; height: 15px;
+      border: 2px solid var(--border);
+      border-top-color: var(--orange);
+      border-radius: 50%;
+      animation: spin .65s linear infinite;
+      flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Listing preview */
+    #listing-preview {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 16px;
+      display: none;
+      align-items: flex-start;
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+    #preview-img {
+      width: 68px; height: 68px;
+      object-fit: cover;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .preview-title { font-weight: 700; font-size: 14px; line-height: 1.4; margin-bottom: 5px; }
+    .preview-meta { font-size: 13px; color: var(--gray); display: flex; gap: 14px; flex-wrap: wrap; }
+
+    /* Error */
+    #error-msg {
+      padding: 13px 16px;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 12px;
+      color: #dc2626;
+      font-size: 14px;
+      display: none;
+      margin-bottom: 16px;
+    }
+
+    /* Report */
+    #report-wrapper { display: none; }
+    .report-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .report-label { font-size: 12px; font-weight: 700; color: var(--gray); text-transform: uppercase; letter-spacing: 0.6px; }
+
+    #report {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 36px 40px;
+    }
+    #report h2 { font-size: 18px; font-weight: 800; margin: 32px 0 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+    #report h2:first-child { margin-top: 0; }
+    #report h3 { font-size: 15px; font-weight: 700; margin: 18px 0 8px; }
+    #report p { font-size: 15px; line-height: 1.75; color: #374151; margin-bottom: 12px; }
+    #report ul, #report ol { padding-left: 22px; margin-bottom: 14px; }
+    #report li { font-size: 15px; line-height: 1.75; color: #374151; margin-bottom: 5px; }
+    #report strong { color: var(--dark); }
+    #report code { background: var(--orange-light); color: var(--orange); padding: 2px 7px; border-radius: 5px; font-size: 14px; }
+    #report blockquote { border-left: 3px solid var(--orange); padding: 6px 0 6px 16px; margin: 14px 0; color: var(--gray); font-style: italic; }
+    #report hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
+    #report table { width: 100%; border-collapse: collapse; margin-bottom: 14px; font-size: 14px; }
+    #report th { background: var(--light); padding: 8px 12px; text-align: left; font-weight: 700; border: 1px solid var(--border); }
+    #report td { padding: 8px 12px; border: 1px solid var(--border); color: #374151; }
+
+    @media (max-width: 600px) {
+      .input-row { flex-direction: column; }
+      .btn { width: 100%; }
+      #report { padding: 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Etsy<span>AI</span></div>
+  <div class="badge">Prototype</div>
+</header>
+
+<div class="page">
+
+  <div class="hero">
+    <h1>Find out <em>exactly</em> why your<br>Etsy listing isn't selling</h1>
+    <p>Get an instant AI report covering SEO, pricing, competition, and what to fix first.</p>
+  </div>
+
+  <div class="card">
+
+    <div class="tabs">
+      <button class="tab-btn active" id="tab-url" onclick="switchTab('url')">Analyze by URL</button>
+      <button class="tab-btn" id="tab-paste" onclick="switchTab('paste')">Paste Listing Text</button>
+    </div>
+
+    <!-- URL mode -->
+    <div id="mode-url">
+      <div class="input-group">
+        <div class="input-row">
+          <input type="url" id="url-input"
+            placeholder="https://www.etsy.com/listing/123456789/your-product"
+            autocomplete="off" />
+          <button class="btn" id="analyze-btn" onclick="analyzeUrl()">Analyze →</button>
+        </div>
+
+        <div class="callout">
+          <strong>For accurate results, add a free Etsy API key:</strong>
+          <ol>
+            <li>Go to <a href="https://www.etsy.com/developers/your-apps" target="_blank" style="color:var(--orange);"><strong>etsy.com/developers/your-apps</strong></a> and sign in</li>
+            <li>Click <strong>"Create a New App"</strong> (2 min, free)</li>
+            <li>Copy your <strong>Keystring</strong> and <strong>Shared Secret</strong> and paste below</li>
+          </ol>
+          <div style="display:flex;gap:8px;margin-bottom:6px;">
+            <input type="text" id="api-key-input" placeholder="Keystring (from your Etsy app)" style="flex:1;" />
+            <input type="text" id="shared-secret-input" placeholder="Shared Secret" style="flex:1;" />
+          </div>
+          <p style="font-size:12px;color:var(--gray);">
+            Per <a href="https://developers.etsy.com/documentation/essentials/requests/" target="_blank" style="color:var(--orange);">Etsy API docs</a> — the header uses format <code>keystring:sharedsecret</code>.
+            Without a key, use the "Paste Listing Text" tab instead.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Paste mode -->
+    <div id="mode-paste" style="display:none;">
+      <div class="input-group">
+        <p style="font-size:14px;color:var(--gray);line-height:1.6;">
+          Open any Etsy listing → press <kbd style="background:var(--light);border:1px solid var(--border);padding:1px 6px;border-radius:4px;font-size:12px;">Cmd+A</kbd> then <kbd style="background:var(--light);border:1px solid var(--border);padding:1px 6px;border-radius:4px;font-size:12px;">Cmd+C</kbd> → paste below.
+        </p>
+        <input type="url" id="url-input-paste" placeholder="Listing URL (optional)" />
+        <textarea id="paste-input" rows="7"
+          placeholder="Paste all the text from the Etsy listing page here..."></textarea>
+        <button class="btn btn-full" onclick="analyzePaste()">Analyze Pasted Text →</button>
+      </div>
+    </div>
+
+    <div class="divider" style="margin-top:18px;">or try a demo</div>
+
+    <div class="demo-row">
+      <button class="demo-btn" onclick="runDemo('demo1')">Demo 1 — Struggling Shop</button>
+      <button class="demo-btn" onclick="runDemo('demo2')">Demo 2 — Successful Shop</button>
+    </div>
+
+    <div class="features">
+      <span class="feature">🔎 SEO</span>
+      <span class="feature">💰 Pricing</span>
+      <span class="feature">🏆 Competition</span>
+      <span class="feature">📸 Photos</span>
+      <span class="feature">✅ Action Plan</span>
+    </div>
+
+  </div><!-- /.card -->
+
+  <div id="error-msg"></div>
+
+  <div id="status-bar">
+    <div class="spinner"></div>
+    <span id="status-text">Fetching listing data…</span>
+  </div>
+
+  <div id="listing-preview">
+    <img id="preview-img" src="" alt="" onerror="this.style.display='none'" />
+    <div>
+      <div class="preview-title" id="preview-title"></div>
+      <div class="preview-meta">
+        <span id="preview-price"></span>
+        <span id="preview-shop"></span>
+        <span id="preview-reviews"></span>
+      </div>
+    </div>
+  </div>
+
+  <div id="report-wrapper">
+    <div class="report-toolbar">
+      <span class="report-label">AI Analysis Report</span>
+      <button class="btn btn-ghost btn-sm" onclick="copyReport()">Copy Report</button>
+    </div>
+    <div id="report"></div>
+  </div>
+
+</div><!-- /.page -->
+
+<script>
+  let rawMarkdown = "";
+
+  function switchTab(tab) {
+    document.getElementById("mode-url").style.display   = tab === "url"   ? "block" : "none";
+    document.getElementById("mode-paste").style.display = tab === "paste" ? "block" : "none";
+    document.getElementById("tab-url").classList.toggle("active",   tab === "url");
+    document.getElementById("tab-paste").classList.toggle("active", tab === "paste");
+  }
+
+  async function runAnalysis(payload) {
+    setLoading(true);
+    hideError();
+    document.getElementById("listing-preview").style.display = "none";
+    document.getElementById("report-wrapper").style.display = "none";
+    rawMarkdown = "";
+    document.getElementById("report").innerHTML = "";
+
+    try {
+      const resp = await fetch("/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!resp.ok) {
+        const err = await resp.json();
+        throw new Error(err.error || "Analysis failed");
+      }
+
+      document.getElementById("report-wrapper").style.display = "block";
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop();
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            try { handleMessage(JSON.parse(line.slice(6))); } catch (e) {}
+          }
+        }
+      }
+    } catch (e) {
+      showError(e.message || "Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function analyzeUrl() {
+    const url          = document.getElementById("url-input").value.trim();
+    const apiKey       = document.getElementById("api-key-input").value.trim();
+    const sharedSecret = document.getElementById("shared-secret-input").value.trim();
+    if (!url) { showError("Please enter an Etsy listing URL."); return; }
+    if (!url.includes("etsy.com/listing")) {
+      showError("Please enter a valid Etsy listing URL.");
+      return;
+    }
+    runAnalysis({ url, etsy_api_key: apiKey, etsy_shared_secret: sharedSecret });
+  }
+
+  function analyzePaste() {
+    const text = document.getElementById("paste-input").value.trim();
+    const url  = document.getElementById("url-input-paste").value.trim();
+    if (!text || text.length < 50) {
+      showError("Please paste the full text from an Etsy listing page.");
+      return;
+    }
+    runAnalysis({ pasted_text: text, url });
+  }
+
+  function runDemo(key) {
+    runAnalysis({ demo: key });
+  }
+
+  function handleMessage(msg) {
+    if (msg.type === "listing") {
+      const d = msg.data;
+      if (d.image_url) document.getElementById("preview-img").src = d.image_url;
+      document.getElementById("preview-title").textContent = d.title || "Listing";
+      document.getElementById("preview-price").textContent = d.price ? `$${d.price} ${d.currency || ""}`.trim() : "";
+      document.getElementById("preview-shop").textContent = d.shop_name ? `by ${d.shop_name}` : "";
+      document.getElementById("preview-reviews").textContent = d.review_count ? `${d.review_count} reviews` : "";
+      document.getElementById("listing-preview").style.display = "flex";
+      document.getElementById("status-text").textContent = "Listing found. Running AI analysis…";
+    }
+    if (msg.type === "competitors") {
+      document.getElementById("status-text").textContent =
+        `Analyzed ${msg.count} competitors. Writing report…`;
+    }
+    if (msg.type === "text") {
+      rawMarkdown += msg.content;
+      document.getElementById("report").innerHTML = marked.parse(rawMarkdown);
+    }
+    if (msg.type === "done") {
+      document.getElementById("status-bar").style.display = "none";
+    }
+  }
+
+  function setLoading(on) {
+    const btn = document.getElementById("analyze-btn");
+    if (btn) { btn.disabled = on; btn.textContent = on ? "Analyzing…" : "Analyze →"; }
+    const sb = document.getElementById("status-bar");
+    sb.style.display = on ? "flex" : "none";
+    if (on) document.getElementById("status-text").textContent = "Fetching listing data…";
+  }
+
+  function showError(msg) {
+    const el = document.getElementById("error-msg");
+    el.textContent = "⚠ " + msg;
+    el.style.display = "block";
+  }
+  function hideError() {
+    document.getElementById("error-msg").style.display = "none";
+  }
+
+  function copyReport() {
+    navigator.clipboard.writeText(rawMarkdown).then(() => {
+      const btn = document.querySelector(".btn-ghost");
+      btn.textContent = "Copied!";
+      setTimeout(() => btn.textContent = "Copy Report", 2000);
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    document.getElementById("url-input").addEventListener("keydown", e => {
+      if (e.key === "Enter") analyzeUrl();
+    });
+  });
+</script>
+
+</body>
+</html>

@@ -306,12 +306,12 @@
   <div class="card">
 
     <div class="tabs">
-      <button class="tab-btn active" id="tab-url" onclick="switchTab('url')">Analyze by URL</button>
-      <button class="tab-btn" id="tab-paste" onclick="switchTab('paste')">Paste Listing Text</button>
+      <button class="tab-btn" id="tab-url" onclick="switchTab('url')">Analyze by URL</button>
+      <button class="tab-btn active" id="tab-paste" onclick="switchTab('paste')">Paste Listing Text</button>
     </div>
 
     <!-- URL mode -->
-    <div id="mode-url">
+    <div id="mode-url" style="display:none;">
       <div class="input-group">
         <div class="input-row">
           <input type="url" id="url-input"
@@ -340,7 +340,7 @@
     </div>
 
     <!-- Paste mode -->
-    <div id="mode-paste" style="display:none;">
+    <div id="mode-paste">
       <div class="input-group">
         <p style="font-size:14px;color:var(--gray);line-height:1.6;">
           Open any Etsy listing → press <kbd style="background:var(--light);border:1px solid var(--border);padding:1px 6px;border-radius:4px;font-size:12px;">Cmd+A</kbd> then <kbd style="background:var(--light);border:1px solid var(--border);padding:1px 6px;border-radius:4px;font-size:12px;">Cmd+C</kbd> → paste below.
